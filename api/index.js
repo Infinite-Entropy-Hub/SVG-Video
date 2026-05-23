@@ -31,44 +31,48 @@ app.post('/api/record', async (req, res) => {
 
     const page = await browser.newPage();
     
-    // First load with a large viewport to let the container size itself
-    await page.setViewport({ width: 1920, height: 1920, deviceScaleFactor: 1 });
+    // Always use standard 1080x1920 vertical video resolution
+    await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
     await page.setContent(html, { waitUntil: 'load' });
 
-    // Find the exact dimensions of the user's container
-    const dimensions = await page.evaluate(() => {
+    // Proportional CSS scaling to force the content to fill the 1080x1920 screen
+    await page.evaluate(() => {
       document.body.style.margin = '0';
       document.body.style.padding = '0';
+      document.body.style.display = 'flex';
+      document.body.style.justifyContent = 'center';
+      document.body.style.alignItems = 'center';
+      document.body.style.height = '100vh';
+      document.body.style.overflow = 'hidden';
       if (!document.body.style.backgroundColor) {
           document.body.style.backgroundColor = '#000000';
       }
       
       const el = document.querySelector('.reel-container') || document.body.firstElementChild;
-      if (!el || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return null;
+      if (!el || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
+      
       const rect = el.getBoundingClientRect();
-      return {
-        width: Math.round(rect.width),
-        height: Math.round(rect.height)
-      };
+      if (rect.width > 0 && rect.height > 0) {
+        // Calculate the scale needed to fill 1080x1920
+        const scaleX = 1080 / rect.width;
+        const scaleY = 1920 / rect.height;
+        // Use the smaller scale to ensure it fits within the screen, or stretch if they want it full
+        const scale = Math.min(scaleX, scaleY);
+        
+        // Only scale if it's smaller than the viewport
+        if (scale > 1.01 || scale < 0.99) {
+          el.style.transform = `scale(${scale})`;
+          el.style.transformOrigin = 'center center';
+        }
+      }
     });
-
-    let targetWidth = dimensions ? dimensions.width : 1080;
-    let targetHeight = dimensions ? dimensions.height : 1920;
-
-    // Ensure even dimensions for ffmpeg
-    if (targetWidth % 2 !== 0) targetWidth += 1;
-    if (targetHeight % 2 !== 0) targetHeight += 1;
-
-    // Set viewport exactly to the container size to CROP out all black margins,
-    // and use deviceScaleFactor: 2 for HIGH QUALITY rendering!
-    await page.setViewport({ width: targetWidth, height: targetHeight, deviceScaleFactor: 2 });
 
     const Config = {
       followNewTab: false,
       fps: 60,
       ffmpeg_Path: ffmpegStatic,
-      videoFrame: { width: targetWidth * 2, height: targetHeight * 2 },
-      aspectRatio: `${targetWidth}:${targetHeight}`,
+      videoFrame: { width: 1080, height: 1920 },
+      aspectRatio: '1080:1920',
       videoBitrate: 10000,
     };
 
