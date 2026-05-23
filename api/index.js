@@ -31,35 +31,44 @@ app.post('/api/record', async (req, res) => {
 
     const page = await browser.newPage();
     
-    // Set viewport to vertical reel
-    await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
-
+    // First load with a large viewport to let the container size itself
+    await page.setViewport({ width: 1920, height: 1920, deviceScaleFactor: 1 });
     await page.setContent(html, { waitUntil: 'load' });
 
-    // Make sure body expands properly and override user's max-width restrictions
-    await page.evaluate(() => {
+    // Find the exact dimensions of the user's container
+    const dimensions = await page.evaluate(() => {
       document.body.style.margin = '0';
       document.body.style.padding = '0';
       if (!document.body.style.backgroundColor) {
           document.body.style.backgroundColor = '#000000';
       }
       
-      // The user's code limits the container to 506x900. Let's force it to 1080x1920 HD!
-      const container = document.querySelector('.reel-container') || document.body.firstElementChild;
-      if (container && container.style) {
-        container.style.maxWidth = '1080px';
-        container.style.maxHeight = '1920px';
-        container.style.width = '100%';
-        container.style.height = '100%';
-      }
+      const el = document.querySelector('.reel-container') || document.body.firstElementChild;
+      if (!el || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return null;
+      const rect = el.getBoundingClientRect();
+      return {
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      };
     });
+
+    let targetWidth = dimensions ? dimensions.width : 1080;
+    let targetHeight = dimensions ? dimensions.height : 1920;
+
+    // Ensure even dimensions for ffmpeg
+    if (targetWidth % 2 !== 0) targetWidth += 1;
+    if (targetHeight % 2 !== 0) targetHeight += 1;
+
+    // Set viewport exactly to the container size to CROP out all black margins,
+    // and use deviceScaleFactor: 2 for HIGH QUALITY rendering!
+    await page.setViewport({ width: targetWidth, height: targetHeight, deviceScaleFactor: 2 });
 
     const Config = {
       followNewTab: false,
       fps: 60,
       ffmpeg_Path: ffmpegStatic,
-      videoFrame: { width: 1080, height: 1920 },
-      aspectRatio: '9:16',
+      videoFrame: { width: targetWidth * 2, height: targetHeight * 2 },
+      videoBitrate: 10000,
     };
 
     const recorder = new PuppeteerScreenRecorder(page, Config);
