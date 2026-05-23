@@ -69,11 +69,11 @@ app.post('/api/record', async (req, res) => {
 
     const Config = {
       followNewTab: false,
-      fps: 60,
+      fps: 30, // Reduced to 30 FPS. 60 FPS causes Chrome CDP to drop frames and hang at 1080x1920 resolution.
       ffmpeg_Path: ffmpegStatic,
       videoFrame: { width: 1080, height: 1920 },
       aspectRatio: '1080:1920',
-      videoBitrate: 10000,
+      videoBitrate: 8000,
     };
 
     const recorder = new PuppeteerScreenRecorder(page, Config);
