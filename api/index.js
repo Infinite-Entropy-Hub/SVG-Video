@@ -68,6 +68,7 @@ app.post('/api/record', async (req, res) => {
       fps: 60,
       ffmpeg_Path: ffmpegStatic,
       videoFrame: { width: targetWidth * 2, height: targetHeight * 2 },
+      aspectRatio: `${targetWidth}:${targetHeight}`,
       videoBitrate: 10000,
     };
 
