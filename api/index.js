@@ -1,10 +1,10 @@
-const express = require('express');
-const cors = require('cors');
-const puppeteer = require('puppeteer');
-const { PuppeteerScreenRecorder } = require('puppeteer-screen-recorder');
-const ffmpegStatic = require('ffmpeg-static');
-const path = require('path');
-const fs = require('fs');
+import express from 'express';
+import cors from 'cors';
+import puppeteer from 'puppeteer';
+import { PuppeteerScreenRecorder } from 'puppeteer-screen-recorder';
+import ffmpegStatic from 'ffmpeg-static';
+import path from 'path';
+import fs from 'fs';
 
 const app = express();
 
@@ -20,7 +20,7 @@ app.post('/api/record', async (req, res) => {
 
   // Vercel Serverless Functions only allow writing to /tmp
   const outputFilename = `output-${Date.now()}.mp4`;
-  const outputPath = process.env.VERCEL ? path.join('/tmp', outputFilename) : path.join(__dirname, outputFilename);
+  const outputPath = process.env.VERCEL ? path.join('/tmp', outputFilename) : path.join(process.cwd(), outputFilename);
 
   let browser;
   try {
@@ -86,4 +86,4 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Export the app for Vercel
-module.exports = app;
+export default app;
