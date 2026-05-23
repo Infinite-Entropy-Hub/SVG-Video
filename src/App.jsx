@@ -23,7 +23,8 @@ function App() {
       setIsRecording(true);
       showToast(`Generating ${duration}s video headlessly. Please wait...`);
       
-      const response = await fetch('/api/record', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const response = await fetch(`${backendUrl}/api/record`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
