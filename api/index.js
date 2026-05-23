@@ -36,12 +36,21 @@ app.post('/api/record', async (req, res) => {
 
     await page.setContent(html, { waitUntil: 'load' });
 
-    // Make sure body expands properly
+    // Make sure body expands properly and override user's max-width restrictions
     await page.evaluate(() => {
       document.body.style.margin = '0';
       document.body.style.padding = '0';
       if (!document.body.style.backgroundColor) {
           document.body.style.backgroundColor = '#000000';
+      }
+      
+      // The user's code limits the container to 506x900. Let's force it to 1080x1920 HD!
+      const container = document.querySelector('.reel-container') || document.body.firstElementChild;
+      if (container && container.style) {
+        container.style.maxWidth = '1080px';
+        container.style.maxHeight = '1920px';
+        container.style.width = '100%';
+        container.style.height = '100%';
       }
     });
 
