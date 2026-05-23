@@ -1,15 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Download, Code2, Play, Circle, CheckCircle2, FileVideo } from 'lucide-react';
 
 function App() {
-  const [svgInput, setSvgInput] = useState(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="400" height="400">
-  <circle cx="100" cy="100" r="50" fill="#5e6ad2">
-    <animate attributeName="r" values="50; 80; 50" dur="2s" repeatCount="indefinite" />
-  </circle>
-</svg>`);
-  
+  const [svgInput, setSvgInput] = useState('');
   const [duration, setDuration] = useState(5);
   const [isRecording, setIsRecording] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [statusText, setStatusText] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const previewRef = useRef(null);
 
@@ -19,43 +16,65 @@ function App() {
   };
 
   const startRecording = async () => {
+    if (!svgInput.trim()) {
+      showToast('Please enter SVG code first');
+      return;
+    }
+
+    setIsRecording(true);
+    setProgress(0);
+    setStatusText('Starting...');
+    
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
     try {
-      setIsRecording(true);
-      showToast(`Generating ${duration}s video headlessly. Please wait...`);
-      
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const response = await fetch(`${backendUrl}/api/record`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ html: svgInput, duration }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate video');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.replace('data: ', ''));
+            
+            setProgress(data.progress);
+            
+            if (data.status === 'launching') setStatusText('Launching renderer...');
+            else if (data.status === 'loading') setStatusText('Loading graphics...');
+            else if (data.status === 'preparing') setStatusText('Preparing timeline...');
+            else if (data.status === 'rendering') setStatusText('Rendering frames...');
+            else if (data.status === 'encoding') setStatusText('Encoding MP4 video...');
+            else if (data.status === 'done') {
+              setStatusText('Done!');
+              
+              // Open in a new tab instead of forcing immediate download
+              window.open(`${backendUrl}${data.downloadUrl}`, '_blank');
+              
+              setIsRecording(false);
+              showToast('Video ready! Opened in new tab.');
+              break;
+            } else if (data.status === 'error') {
+              throw new Error(data.error);
+            }
+          }
+        }
       }
-
-      // Convert response to blob
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      
-      // Trigger download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `animation.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      setIsRecording(false);
-      showToast(`Video successfully generated and downloaded!`);
-
     } catch (err) {
       console.error("Recording failed:", err);
       setIsRecording(false);
       showToast('Failed to generate video. See console for details.');
+      setProgress(0);
     }
   };
 
@@ -63,39 +82,8 @@ function App() {
     <div className="dashboard-layout">
       <header className="header">
         <div className="header-title">
-          <FileVideo size={24} color="#5e6ad2" />
-          <span>SVG Animator to Video</span>
-        </div>
-        <div className="controls">
-          <div className="input-group">
-            <label htmlFor="duration">Duration (s)</label>
-            <input 
-              type="number" 
-              id="duration"
-              min="1" 
-              max="60" 
-              value={duration} 
-              onChange={(e) => setDuration(Number(e.target.value))} 
-              disabled={isRecording}
-            />
-          </div>
-          <button 
-            className="btn btn-primary" 
-            onClick={startRecording}
-            disabled={isRecording}
-          >
-            {isRecording ? (
-              <>
-                <Circle size={18} fill="currentColor" className="recording-indicator" />
-                Recording...
-              </>
-            ) : (
-              <>
-                <Download size={18} />
-                Download Video
-              </>
-            )}
-          </button>
+          <FileVideo size={24} color="var(--accent)" />
+          <span>SVG to Video Studio</span>
         </div>
       </header>
 
@@ -104,7 +92,7 @@ function App() {
           <div className="panel-header">
             <div className="panel-header-title">
               <Code2 size={16} />
-              SVG Code Input
+              <span>SVG Source</span>
             </div>
           </div>
           <div className="code-editor-container">
@@ -112,30 +100,90 @@ function App() {
               className="code-editor"
               value={svgInput}
               onChange={(e) => setSvgInput(e.target.value)}
-              placeholder="Paste your SVG HTML code here..."
+              placeholder="Paste your 1080x1920 SVG code here..."
               spellCheck="false"
             />
           </div>
         </div>
 
-        <div className="panel preview-panel" style={isRecording ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px #ef4444' } : {}}>
+        <div className="panel preview-panel" style={{ position: 'relative' }}>
           <div className="panel-header">
             <div className="panel-header-title">
               <Play size={16} />
-              Live Preview
+              <span>Live Preview</span>
             </div>
-            {isRecording && <div className="recording-indicator">● REC</div>}
+            
+            <div className="controls">
+              <div className="input-group" style={{ opacity: isRecording ? 0.5 : 1, pointerEvents: isRecording ? 'none' : 'auto' }}>
+                <label>Duration (s):</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  disabled={isRecording}
+                />
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={startRecording}
+                disabled={isRecording || !svgInput.trim()}
+              >
+                {isRecording ? (
+                  <span className="recording-indicator">
+                    <Circle size={14} fill="currentColor" /> Rendering...
+                  </span>
+                ) : (
+                  <>
+                    <Download size={16} /> Generate MP4
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-          <div className="preview-container" ref={previewRef}>
+          
+          <div className="preview-container">
+            {/* PROGRESS OVERLAY - Appears over the preview window while recording */}
+            {isRecording && (
+              <div className="progress-overlay">
+                <div className="progress-container">
+                  <div className="progress-header">
+                    <span className="progress-title">Generating Video</span>
+                    <span className="progress-percentage">{progress}%</span>
+                  </div>
+                  <div className="progress-bar-bg">
+                    <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+                  </div>
+                  <span className="progress-text">{statusText}</span>
+                </div>
+              </div>
+            )}
+
             {svgInput ? (
-              <iframe 
+              <iframe
+                ref={previewRef}
+                title="SVG Preview"
                 className="preview-iframe"
-                title="live-preview"
-                srcDoc={svgInput}
+                srcDoc={`
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <style>
+                        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; background: #000; }
+                        .preview-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+                        svg { max-width: 100%; max-height: 100%; object-fit: contain; }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="preview-wrapper">${svgInput}</div>
+                    </body>
+                  </html>
+                `}
               />
             ) : (
               <div className="empty-state">
-                <FileVideo size={48} opacity={0.5} />
+                <Code2 size={48} opacity={0.2} />
                 <p>Paste SVG code to see preview</p>
               </div>
             )}
@@ -145,7 +193,7 @@ function App() {
 
       {toastMessage && (
         <div className="toast">
-          <CheckCircle2 size={20} className="toast-icon" />
+          <CheckCircle2 className="toast-icon" size={20} />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -153,4 +201,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 

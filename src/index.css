@@ -10,7 +10,7 @@
   --text-main: #ededed;
   --text-muted: #a1a1aa;
   --border: #27272a;
-  
+
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -77,13 +77,8 @@ body {
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.code-panel {
-  flex: 6;
-}
-
-.preview-panel {
-  flex: 4;
-}
+.code-panel { flex: 6; }
+.preview-panel { flex: 4; }
 
 .panel:hover {
   border-color: rgba(94, 106, 210, 0.4);
@@ -129,9 +124,7 @@ body {
   outline: none;
 }
 
-.code-editor::placeholder {
-  color: #475569;
-}
+.code-editor::placeholder { color: #475569; }
 
 .preview-container {
   flex: 1;
@@ -139,8 +132,7 @@ body {
   align-items: center;
   justify-content: center;
   background-color: #0f0f11;
-  background-image: 
-    radial-gradient(var(--border) 1px, transparent 1px);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
   background-size: 20px 20px;
   overflow: hidden;
   position: relative;
@@ -180,24 +172,9 @@ body {
   transition: border-color 0.2s ease;
 }
 
-.input-group:focus-within {
-  border-color: var(--accent);
-}
-
-.input-group label {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin-right: 8px;
-}
-
-.input-group input {
-  background: transparent;
-  border: none;
-  color: var(--text-main);
-  width: 60px;
-  font-size: 0.9rem;
-  outline: none;
-}
+.input-group:focus-within { border-color: var(--accent); }
+.input-group label { color: var(--text-muted); font-size: 0.85rem; margin-right: 8px; }
+.input-group input { background: transparent; border: none; color: var(--text-main); width: 60px; font-size: 0.9rem; outline: none; }
 
 .btn {
   display: inline-flex;
@@ -226,16 +203,8 @@ body {
   box-shadow: 0 6px 16px rgba(94, 106, 210, 0.5);
 }
 
-.btn-primary:active {
-  transform: translateY(1px);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 .recording-indicator {
   display: flex;
@@ -253,31 +222,84 @@ body {
   100% { opacity: 1; }
 }
 
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border);
-  padding: 16px 24px;
+/* UPDATED PROGRESS BAR STYLES */
+.progress-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 11, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 80%;
+  max-width: 400px;
+  background: var(--bg-panel);
+  padding: 24px;
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-title {
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.progress-percentage {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.progress-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background-color: var(--bg-dark);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--accent);
+  border-radius: 10px;
+  transition: width 0.2s ease-out;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Ensure controls don't wrap weirdly */
+.controls {
   display: flex;
   align-items: center;
   gap: 12px;
-  z-index: 100;
-  transform: translateY(100px);
-  opacity: 0;
-  animation: slideUp 0.3s forwards cubic-bezier(0.16, 1, 0.3, 1);
+  flex-wrap: nowrap;
 }
-
 @keyframes slideUp {
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-.toast-icon {
-  color: var(--accent);
-}
+.toast-icon { color: var(--accent); }
